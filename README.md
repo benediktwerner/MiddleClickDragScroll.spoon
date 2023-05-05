@@ -3,7 +3,7 @@
 This Hammerspoon tool lets you scroll by holding down the middle mouse button and dragging it, the same as it works on Windows.
 Especially useful to quickly scroll to the top or bottom of a page, if you don't have a Magic Mouse.
 
-<video src='https://github.com/benediktwerner/MiddleClickDragScroll.spoon/raw/master/doc/demo.mp4' />
+<video src='https://github.com/benediktwerner/MiddleClickDragScroll.spoon/raw/master/doc/demo.mp4'></video>
 
 > Note: Due to OS limitations, it always scrolls the window currently below the mouse, not the window below the position
 > where the dragging started, like it works on Windows. You therefore need to take some care to stay inside the window.
