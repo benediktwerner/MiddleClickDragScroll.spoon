@@ -9,7 +9,7 @@
 --- == Usage ==
 ---
 --- ```lua
---- local MiddleClickDragScroll = hs.loadSpoon("MiddleClickDragScroll"):start()
+--- MiddleClickDragScroll = hs.loadSpoon("MiddleClickDragScroll"):start()
 --- ```
 ---
 --- You can temporarily stop the spoon by calling `MiddleClickDragScroll:stop()` and then restart it by calling `MiddleClickDragScroll:start()` again.
@@ -17,7 +17,7 @@
 --- == Configuration ==
 ---
 --- ```lua
---- local MiddleClickDragScroll = hs.loadSpoon("MiddleClickDragScroll"):configure{
+--- MiddleClickDragScroll = hs.loadSpoon("MiddleClickDragScroll"):configure{
 ---   excludedApps = {"Some App", "Other app"},         -- Don't activate scrolling in apps with these names
 ---   excludedWindows = {"^Some Window Title$"},        -- Don't activate scrolling in windows with these names (supports regex, for exact match, use "^title$")
 ---   excludedUrls = {"^https://geogebra.calculator$"}, -- Don't activate scrolling when the active window is on these URLs (supports regex, only works in Chrome and Safari, asks for extra permissions on first trigger)
@@ -47,11 +47,11 @@
 --- Instead of `indicatorSize` and `indicatorAttributes`, you can also pass a custom canvas to `configure` or set it directly to have more control over the indicator style:
 ---
 --- ```lua
----   MiddleClickDragScroll.canvas = hs.canvas.new{ w = 25, h = 25}:insertElement{
----     type = "circle",
----     fillColor = { red = 0, green = 0, blue = 0, alpha = 0.3 },
----     strokeColor = { red = 1, green = 1, blue = 1, alpha = 0.5 },
----   }
+--- MiddleClickDragScroll.canvas = hs.canvas.new{ w = 25, h = 25}:insertElement{
+---   type = "circle",
+---   fillColor = { red = 0, green = 0, blue = 0, alpha = 0.3 },
+---   strokeColor = { red = 1, green = 1, blue = 1, alpha = 0.5 },
+--- }
 --- ```
 ---
 --- For more details, see: https://www.hammerspoon.org/docs/hs.canvas.html
@@ -67,9 +67,10 @@ MiddleClickDragScroll.name = "MiddleClickDragScroll"
 MiddleClickDragScroll.version = "1.0.0"
 MiddleClickDragScroll.spoon = hs.spoons.scriptPath()
 
-MiddleClickDragScroll.excludedApps = {}       -- Don't activate scrolling in apps with these names
-MiddleClickDragScroll.excludedWindows = {}    -- Don't activate scrolling in windows with these names (supports regex)
-MiddleClickDragScroll.excludedUrls = {}       -- Don't activate scrolling when the active window is on these URLs (supports regex, only works in Chrome and Safari, asks for extra permissions on first trigger)
+MiddleClickDragScroll.excludedApps = {}           -- Don't activate scrolling if the moust is above a window of an app with these names
+MiddleClickDragScroll.excludedFrontmostApps = {}  -- Don't activate scrolling if the frontmost app has any of these names
+MiddleClickDragScroll.excludedWindows = {}        -- Don't activate scrolling in windows with these names (supports regex)
+MiddleClickDragScroll.excludedUrls = {}           -- Don't activate scrolling when the active window is on these URLs (supports regex, only works in Chrome and Safari, asks for extra permissions on first trigger)
 MiddleClickDragScroll.indicatorSize = 25      -- Size of the scrolling indicator in pixels
 MiddleClickDragScroll.indicatorAttributes =   -- Attributes of the scrolling indicator. Takes any specified on https://www.hammerspoon.org/docs/hs.canvas.html#attributes. Alternatively, you can pass a custom canvas.
 {
@@ -92,17 +93,40 @@ local function signum(n)
   else return 0 end
 end
 
-local function getWindowUnderMouse()
-  -- Adapted from SkyRocket.spoon
-  -- Invoke `hs.application` because `hs.window.orderedWindows()` doesn't do it and breaks itself
-  local _ = hs.application
+local windowFilter = hs.window.filter.new()
+windowFilter:setSortOrder(hs.window.filter.sortByFocusedLast)
+local windows = {}
 
+for _, w in ipairs(windowFilter:getWindows()) do
+  table.insert(windows, w)
+end
+
+local function windowFilterCallback(w, appName, event)
+  if event == "windowDestroyed" then
+    for i, v in ipairs(windows) do
+        if v == w then
+          table.remove(windows, i)
+          return
+        end
+    end
+  elseif event == "windowCreated" then
+    table.insert(windows, 1, w)
+  elseif event == "windowFocused" then
+    windowFilterCallback(w, appName, "windowDestroyed")
+    windowFilterCallback(w, appName, "windowCreated")
+  end
+end
+windowFilter:subscribe(hs.window.filter.windowCreated, windowFilterCallback)
+windowFilter:subscribe(hs.window.filter.windowDestroyed, windowFilterCallback)
+windowFilter:subscribe(hs.window.filter.windowFocused, windowFilterCallback)
+
+local function getWindowUnderMouse()
   local mousePos = hs.geometry.new(hs.mouse.absolutePosition())
   local screen = hs.mouse.getCurrentScreen()
-
-  return hs.fnutils.find(hs.window.orderedWindows(), function(w)
+  local res = hs.fnutils.find(windows, function(w)
     return screen == w:screen() and mousePos:inside(w:frame())
   end)
+  return res
 end
 
 function MiddleClickDragScroll:init()
@@ -126,10 +150,12 @@ function MiddleClickDragScroll:handleMouseDown()
     if event:getProperty(hs.eventtap.event.properties.mouseEventButtonNumber) ~= 2 then
       return
     end
-  
+
+    local frontmostAppTitle = hs.application.frontmostApplication():name()
+    if hs.fnutils.some(self.excludedFrontmostApps, function(a) return a == frontmostAppTitle end) then return end
+
     local window = getWindowUnderMouse()
     if window == nil then return end
-  
     local appTitle = window:application():title()
     if hs.fnutils.some(self.excludedApps, function(a) return a == appTitle end) then return end
   
@@ -138,12 +164,12 @@ function MiddleClickDragScroll:handleMouseDown()
   
     if appTitle == "Safari" and #self.excludedUrls > 0 then
       local _, url = hs.osascript.applescript('tell application "Safari" to return URL of current tab of front window')
-      if hs.fnutils.some(self.excludedUrls, function(u) return url:match(u) end) then return end
+      if url ~= nil and hs.fnutils.some(self.excludedUrls, function(u) return url:match(u) end) then return end
     end
   
     if appTitle == "Google Chrome" and #self.excludedUrls > 0 then
       local _, url = hs.osascript.applescript('tell application "Google Chrome" to return URL of active tab of front window')
-      if hs.fnutils.some(self.excludedUrls, function(u) return url:match(u) end) then return end
+      if url ~= nil and hs.fnutils.some(self.excludedUrls, function(u) return url:match(u) end) then return end
     end
   
     self.startPos = event:location()
@@ -160,7 +186,7 @@ function MiddleClickDragScroll:handleMouseDragged()
   
     local loc = event:location()
     if loc == nil then
-      return true
+      return
     end
 
     self.currPos = loc
@@ -219,6 +245,7 @@ end
 
 function MiddleClickDragScroll:configure(options)
   self.excludedApps = options.excludedApps or self.excludedApps 
+  self.excludedFrontmostApps = options.excludedFrontmostApps or self.excludedFrontmostApps
   self.excludedWindows = options.excludedWindows or self.excludedWindows 
   self.excludedUrls = options.excludedUrls or self.excludedUrls 
   self.startDistance = options.startDistance or self.startDistance 
