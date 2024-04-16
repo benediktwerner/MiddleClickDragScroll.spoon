@@ -50,11 +50,12 @@ hs.hotkey.bind({"cmd", "alt"}, "S", function() -- Cmd + Alt + S
 end)
 ```
 
-== Configuration ==
+### Configuration
 
 ```lua
 local MiddleClickDragScroll = hs.loadSpoon("MiddleClickDragScroll"):configure{
-  excludedApps = {"Some App", "Other app"},         -- Don't activate scrolling in apps with these names
+  excludedFrontmostApps = {"Some App", "Other"},    -- Don't activate scrolling if the frontmost app has any of these names
+  excludedApps = {"Some App", "Other app"},         -- Don't activate scrolling if the mouse is above a window of an app with these names. Prefer using `excludeFrontmostApps` if possible for better performance.
   excludedWindows = {"^Some Window Title$"},        -- Don't activate scrolling in windows with these names (supports regex, for exact match, use "^title$")
   excludedUrls = {"^https://geogebra.calculator$"}, -- Don't activate scrolling when the active window is on these URLs (supports regex, only works in Chrome and Safari, asks for extra permissions on first trigger)
   indicatorSize = 25,   -- Size of the scrolling indicator in pixels
