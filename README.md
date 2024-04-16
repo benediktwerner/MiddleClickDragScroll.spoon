@@ -5,7 +5,8 @@ Especially useful to quickly scroll to the top or bottom of a page, if you don't
 
 <video src="https://user-images.githubusercontent.com/19309705/236555947-c8a37ddf-8a1f-4b74-9285-89c317f88688.mp4"></video>
 
-> **Note** Due to OS limitations, it always scrolls the window currently below the mouse, not the window below the position
+> [!NOTE]
+> Due to OS limitations, it always scrolls the window currently below the mouse, not the window below the position
 > where the dragging started, like it works on Windows. You therefore need to take some care to stay inside the window.
 
 ## Installation
@@ -14,7 +15,8 @@ This tool requires [Hammerspoon](https://www.hammerspoon.org/) to be installed a
 
 ### Option 1: Download from the releases page
 
-Download the latest version by clicking [here]() (or going to the [Releases page]()), unzip it, and double-click `MiddleClickDragScroll.spoon` inside the zip.
+Download the latest version by clicking [here](https://github.com/benediktwerner/MiddleClickDragScroll.spoon/releases/download/v1.0.0/MiddleClickDragScroll.zip)
+(or going to the [Releases page](https://github.com/benediktwerner/MiddleClickDragScroll.spoon/releases)), unzip it, and double-click the unzipped `MiddleClickDragScroll.spoon`.
 Note, double-clicking only does something if you already have Hammerspoon installed. Alternatively, you can also just move the `MiddleClickDragScroll.spoon` directory to `~/.hammerspoon/Spoons/`.
 
 Either way, continue with the Usage section.
